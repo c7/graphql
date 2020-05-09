@@ -15,6 +15,71 @@ Initial version based on <https://github.com/machinebox/graphql>
 go get github.com/c7/graphql
 ```
 
+## Usage
+
+```go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+
+	"github.com/c7/graphql"
+)
+
+func main() {
+	gql := graphql.NewClient("https://swapi.graph.cool")
+
+	ctx := context.Background()
+
+	req := graphql.NewRequest(`
+		query {
+		  allStarships(filter: { crew_gt: 5, crew_lt: 10 }, orderBy: crew_ASC) {
+		    name
+		    crew
+		  }
+		}
+	`)
+
+	var resp struct {
+		AllStarships []struct {
+			Name string
+			Crew int
+		}
+	}
+
+	if err := gql.Run(ctx, req, &resp); err != nil {
+		panic(err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(resp)
+}
+```
+
+```json
+{
+  "AllStarships": [
+    {
+      "Name": "Imperial shuttle",
+      "Crew": 6
+    },
+    {
+      "Name": "Rebel transport",
+      "Crew": 6
+    },
+    {
+      "Name": "Naboo Royal Starship",
+      "Crew": 8
+    },
+    {
+      "Name": "Republic Cruiser",
+      "Crew": 9
+    }
+  ]
+}
+```
+
 <img src="https://data.gopher.se/gopher/viking-gopher.svg" align="right" width="30%" height="300">
 
 ## License (Apache)
