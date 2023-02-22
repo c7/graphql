@@ -1,6 +1,6 @@
 # graphql
 
-[![Build Status](https://travis-ci.org/c7/graphql.svg?branch=master)](https://travis-ci.org/c7/graphql)
+[![Build status](https://github.com/c7/graphql/actions/workflows/test.yml/badge.svg)](https://github.com/c7/graphql/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/c7/graphql?style=flat)](https://goreportcard.com/report/github.com/c7/graphql)
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/c7/graphql)
 [![License Apache](https://img.shields.io/badge/license-Apache-lightgrey.svg?style=flat)](https://github.com/c7/graphql#license-apache)
