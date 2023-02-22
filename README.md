@@ -21,47 +21,47 @@ go get github.com/c7/graphql
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"os"
+  "context"
+  "encoding/json"
+  "os"
 
-	"github.com/c7/graphql"
+  "github.com/c7/graphql"
 )
 
 func main() {
-	gql := graphql.NewClient("https://swapi-graphql.netlify.app/.netlify/functions/index")
+  gql := graphql.NewClient("https://swapi-graphql.netlify.app/.netlify/functions/index")
 
-	ctx := context.Background()
+  ctx := context.Background()
 
-	req := graphql.NewRequest(`
-		query {
-			allStarships(first: 4) {
-    		totalCount
-    		starships {
-      		name
-      		model
-      		crew
-    		}
-  		}
-		}
-	`)
+  req := graphql.NewRequest(`
+    query {
+      allStarships(first: 4) {
+        totalCount
+        starships {
+          name
+          model
+          crew
+        }
+      }
+    }
+  `)
 
-	var resp struct {
-		AllStarships struct {
-			TotalCount int
-			Starships  []struct {
-				Name  string
-				Model string
-				Crew  string
-			}
-		}
-	}
+  var resp struct {
+    AllStarships struct {
+      TotalCount int
+      Starships  []struct {
+        Name  string
+        Model string
+        Crew  string
+      }
+    }
+  }
 
-	if err := gql.Run(ctx, req, &resp); err != nil {
-		panic(err)
-	}
+  if err := gql.Run(ctx, req, &resp); err != nil {
+    panic(err)
+  }
 
-	json.NewEncoder(os.Stdout).Encode(resp)
+  json.NewEncoder(os.Stdout).Encode(resp)
 }
 ```
 
