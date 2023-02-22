@@ -29,23 +29,31 @@ import (
 )
 
 func main() {
-	gql := graphql.NewClient("https://swapi.graph.cool")
+	gql := graphql.NewClient("https://swapi-graphql.netlify.app/.netlify/functions/index")
 
 	ctx := context.Background()
 
 	req := graphql.NewRequest(`
 		query {
-		  allStarships(filter: { crew_gt: 5, crew_lt: 10 }, orderBy: crew_ASC) {
-		    name
-		    crew
-		  }
+			allStarships(first: 4) {
+    		totalCount
+    		starships {
+      		name
+      		model
+      		crew
+    		}
+  		}
 		}
 	`)
 
 	var resp struct {
-		AllStarships []struct {
-			Name string
-			Crew int
+		AllStarships struct {
+			TotalCount int
+			Starships  []struct {
+				Name  string
+				Model string
+				Crew  string
+			}
 		}
 	}
 
@@ -59,24 +67,31 @@ func main() {
 
 ```json
 {
-  "AllStarships": [
-    {
-      "Name": "Imperial shuttle",
-      "Crew": 6
-    },
-    {
-      "Name": "Rebel transport",
-      "Crew": 6
-    },
-    {
-      "Name": "Naboo Royal Starship",
-      "Crew": 8
-    },
-    {
-      "Name": "Republic Cruiser",
-      "Crew": 9
-    }
-  ]
+  "AllStarships": {
+    "TotalCount": 36,
+    "Starships": [
+      {
+        "Name": "CR90 corvette",
+        "Model": "CR90 corvette",
+        "Crew": "30-165"
+      },
+      {
+        "Name": "Star Destroyer",
+        "Model": "Imperial I-class Star Destroyer",
+        "Crew": "47,060"
+      },
+      {
+        "Name": "Sentinel-class landing craft",
+        "Model": "Sentinel-class landing craft",
+        "Crew": "5"
+      },
+      {
+        "Name": "Death Star",
+        "Model": "DS-1 Orbital Battle Station",
+        "Crew": "342,953"
+      }
+    ]
+  }
 }
 ```
 
@@ -84,7 +99,7 @@ func main() {
 
 ## License (Apache)
 
-Copyright 2020 [Code7 Interactive](https://c7.se)
+Copyright 2020-2023 [Code7 Interactive](https://c7.se)
 
 > Licensed under the Apache License, Version 2.0 (the "License");
 > you may not use this file except in compliance with the License.
