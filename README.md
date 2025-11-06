@@ -29,7 +29,7 @@ import (
 )
 
 func main() {
-  gql := graphql.NewClient("https://swapi-graphql.netlify.app/.netlify/functions/index")
+  gql := graphql.NewClient("https://swapi-graphql.netlify.app/graphql")
 
   ctx := context.Background()
 
@@ -99,7 +99,7 @@ func main() {
 
 ## License (Apache)
 
-Copyright 2020-2023 [Code7 Interactive](https://c7.se)
+Copyright 2020-2025 [Code7 Interactive](https://c7.se)
 
 > Licensed under the Apache License, Version 2.0 (the "License");
 > you may not use this file except in compliance with the License.
