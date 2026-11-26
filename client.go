@@ -63,17 +63,25 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp any) error 
 	if err != nil {
 		return err
 	}
-	defer func() {
-		// Drain any remaining body so the connection can be reused.
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
+
+	body := &readErrRecorder{r: res.Body}
 
 	gr := graphResponse{
 		Data: resp,
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&gr); err != nil {
+	decodeErr := json.NewDecoder(body).Decode(&gr)
+
+	// Drain any remaining body so the connection can be reused. Read errors
+	// are recorded by body and take precedence over decoding errors.
+	_, _ = io.Copy(io.Discard, body)
+
+	if body.err != nil {
+		return fmt.Errorf("reading body: %w", body.err)
+	}
+
+	if err := decodeErr; err != nil {
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("graphql: server returned a non-200 status code: %v", res.StatusCode)
 		}
@@ -128,6 +136,23 @@ func newJSONRequestBody(req *Request) (*bytes.Reader, error) {
 	}
 
 	return bytes.NewReader(body), nil
+}
+
+// readErrRecorder wraps an io.Reader and records the first read error
+// other than io.EOF, allowing transport errors to be told apart from
+// decoding errors when decoding directly from a response body.
+type readErrRecorder struct {
+	r   io.Reader
+	err error
+}
+
+func (rec *readErrRecorder) Read(p []byte) (int, error) {
+	n, err := rec.r.Read(p)
+	if err != nil && err != io.EOF && rec.err == nil {
+		rec.err = err
+	}
+
+	return n, err
 }
 
 type graphResponse struct {
