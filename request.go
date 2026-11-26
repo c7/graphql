@@ -5,7 +5,7 @@ import "net/http"
 // Request is a GraphQL request.
 type Request struct {
 	q    string
-	vars map[string]interface{}
+	vars map[string]any
 
 	// Header represent any request headers that will be set
 	// when the request is made.
