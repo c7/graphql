@@ -16,8 +16,8 @@ func TestNewClient(t *testing.T) {
 				t.Fatalf(`r.Header.Get("Example-Header") = %q, want %q`, got, want)
 			}
 
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
 					"test": "value in response",
 				},
 			})
@@ -93,8 +93,8 @@ func TestNewClient(t *testing.T) {
 
 	t.Run("GraphQL errors", func(t *testing.T) {
 		hf := func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"errors": []map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
+				"errors": []map[string]any{
 					{"message": "first"},
 					{"message": "second"},
 				},
