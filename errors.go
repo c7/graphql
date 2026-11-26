@@ -10,12 +10,27 @@ func (ee Errors) Error() string {
 		return "no errors"
 	}
 
-	errs := make([]string, len(ee))
-	for i, e := range ee {
-		errs[i] = e.Message
+	const prefix, sep = "graphql: ", "; "
+
+	n := len(prefix) + len(sep)*(len(ee)-1)
+	for _, e := range ee {
+		n += len(e.Message)
 	}
 
-	return "graphql: " + strings.Join(errs, "; ")
+	var b strings.Builder
+
+	b.Grow(n)
+	b.WriteString(prefix)
+
+	for i, e := range ee {
+		if i > 0 {
+			b.WriteString(sep)
+		}
+
+		b.WriteString(e.Message)
+	}
+
+	return b.String()
 }
 
 // An Error contains error information returned by the GraphQL server.
@@ -29,10 +44,10 @@ type Error struct {
 	// Path contains the key path of the response field which experienced the
 	// error. This allows clients to identify whether a nil result is
 	// intentional or caused by a runtime error.
-	Path []interface{}
+	Path []any
 	// Extensions may contain additional fields set by the GraphQL service,
 	// such as	an error code.
-	Extensions map[string]interface{}
+	Extensions map[string]any
 }
 
 // A Location is a location in the GraphQL query that resulted in an error.
