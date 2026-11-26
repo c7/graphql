@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -132,4 +134,74 @@ func TestClientRun(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+}
+
+func TestClientRunResponseBody(t *testing.T) {
+	// truncated responds with a Content-Length larger than the body that is
+	// written, and then closes the connection.
+	truncated := func(status int, partial string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			conn, buf, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Errorf("hijack: %v", err)
+				return
+			}
+			defer conn.Close()
+
+			fmt.Fprintf(buf, "HTTP/1.1 %d %s\r\nContent-Length: 1000\r\n\r\n%s",
+				status, http.StatusText(status), partial)
+			buf.Flush()
+		}
+	}
+
+	for _, tc := range []struct {
+		name    string
+		handler http.HandlerFunc
+		want    string
+	}{
+		{
+			name:    "null body",
+			handler: func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "null") },
+			want:    "",
+		},
+		{
+			name:    "truncated mid-JSON",
+			handler: truncated(http.StatusOK, `{"data":{"te`),
+			want:    "reading body: unexpected EOF",
+		},
+		{
+			name:    "truncated mid-JSON with non-200 status",
+			handler: truncated(http.StatusInternalServerError, `{"data":{"te`),
+			want:    "reading body: unexpected EOF",
+		},
+		{
+			name:    "truncated after valid JSON",
+			handler: truncated(http.StatusOK, `{"data":{"test":"value"}}`),
+			want:    "reading body: unexpected EOF",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ts := httptest.NewServer(tc.handler)
+			defer ts.Close()
+
+			var resp struct {
+				Test string
+			}
+
+			err := NewClient(ts.URL).Run(t.Context(), NewRequest("query { test }"), &resp)
+
+			var got string
+			if err != nil {
+				got = err.Error()
+			}
+
+			if got != tc.want {
+				t.Fatalf("err = %q, want %q", got, tc.want)
+			}
+
+			if tc.want != "" && !errors.Is(err, io.ErrUnexpectedEOF) {
+				t.Fatalf("errors.Is(err, io.ErrUnexpectedEOF) = false, want true")
+			}
+		})
+	}
 }
