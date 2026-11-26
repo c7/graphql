@@ -43,7 +43,7 @@ func NewClient(endpoint string, options ...Option) *Client {
 // Pass in a nil response object to skip response parsing.
 // If the request fails or the server returns an error, the first error
 // will be returned.
-func (c *Client) Run(ctx context.Context, req *Request, resp interface{}) error {
+func (c *Client) Run(ctx context.Context, req *Request, resp any) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -53,29 +53,27 @@ func (c *Client) Run(ctx context.Context, req *Request, resp interface{}) error 
 	return c.runWithJSON(ctx, req, resp)
 }
 
-func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}) error {
-	r, err := c.newJSONRequest(req)
+func (c *Client) runWithJSON(ctx context.Context, req *Request, resp any) error {
+	r, err := c.newJSONRequest(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	res, err := c.httpClient.Do(r.WithContext(ctx))
+	res, err := c.httpClient.Do(r)
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() {
+		// Drain any remaining body so the connection can be reused.
+		_, _ = io.Copy(io.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
 
-	var buf bytes.Buffer
-
-	if _, err := io.Copy(&buf, res.Body); err != nil {
-		return fmt.Errorf("reading body: %w", err)
-	}
-
-	gr := &graphResponse{
+	gr := graphResponse{
 		Data: resp,
 	}
 
-	if err := json.NewDecoder(&buf).Decode(&gr); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&gr); err != nil {
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("graphql: server returned a non-200 status code: %v", res.StatusCode)
 		}
@@ -90,13 +88,13 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 	return nil
 }
 
-func (c *Client) newJSONRequest(req *Request) (*http.Request, error) {
+func (c *Client) newJSONRequest(ctx context.Context, req *Request) (*http.Request, error) {
 	body, err := newJSONRequestBody(req)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := http.NewRequest(http.MethodPost, c.endpoint, body)
+	r, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, body)
 	if err != nil {
 		return nil, err
 	}
@@ -115,25 +113,24 @@ func (c *Client) newJSONRequest(req *Request) (*http.Request, error) {
 	return r, nil
 }
 
-func newJSONRequestBody(req *Request) (*bytes.Buffer, error) {
-	var body bytes.Buffer
-
+func newJSONRequestBody(req *Request) (*bytes.Reader, error) {
 	v := struct {
-		Query     string                 `json:"query"`
-		Variables map[string]interface{} `json:"variables"`
+		Query     string         `json:"query"`
+		Variables map[string]any `json:"variables"`
 	}{
 		Query:     req.q,
 		Variables: req.vars,
 	}
 
-	if err := json.NewEncoder(&body).Encode(v); err != nil {
+	body, err := json.Marshal(v)
+	if err != nil {
 		return nil, fmt.Errorf("encode body: %w", err)
 	}
 
-	return &body, nil
+	return bytes.NewReader(body), nil
 }
 
 type graphResponse struct {
-	Data   interface{}
+	Data   any
 	Errors Errors
 }
